@@ -10,9 +10,11 @@ public class Testing : MonoBehaviour
     private AudioSource audioSource;
     private Dictionary<string, float> notes;
 
-    private float waitInterval = 0.5f;
-    private float soundDuration = 0.3f;
-    private float soundDurationLong = 0.7f;
+    private float soundDuration = 0.2f;
+    private float waitInterval = 0.3f; // no less than soundDuration
+    private float soundDurationInside = 0.3f;
+    private float waitIntervalInside = 0.4f; // no less than soundDurationInside
+    private float soundDurationChord = 0.5f;
 
     string[] chords = new string[] {
                                     "135",
@@ -184,7 +186,7 @@ public class Testing : MonoBehaviour
     {
         foreach (char temp in thisChord.ToCharArray())
         {
-            playMySound(notes[temp.ToString()], soundDurationLong);
+            playMySound(notes[temp.ToString()], soundDurationChord);
         }
     }
 
@@ -218,7 +220,7 @@ public class Testing : MonoBehaviour
                         scale *= 2;
                     }
                     prevFreq = thisFreq;
-                    playMySound(thisFreq*scale,soundDuration);
+                    playMySound(thisFreq*scale,soundDurationInside);
 
                     if (isRow)
                     {
@@ -229,7 +231,7 @@ public class Testing : MonoBehaviour
                         grid.GetTextObj(colIndex,i).text += "!!!";
                     }
 
-                    yield return new WaitForSeconds(waitInterval);
+                    yield return new WaitForSeconds(waitIntervalInside);
                 }
             }
         }
