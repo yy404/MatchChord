@@ -147,14 +147,14 @@ public class Testing : MonoBehaviour
         if (chordRow != "")
         {
             yield return new WaitForSeconds(waitInterval);
-            yield return showChordList(chordRow, y, -1);
+            // yield return showChordList(chordRow, y, -1);
             playChord(chordRow);
             collected[chordRow] += 1;
         }
         if (chordCol != "")
         {
             yield return new WaitForSeconds(waitInterval);
-            yield return showChordList(chordCol, -1, x);
+            // yield return showChordList(chordCol, -1, x);
             playChord(chordCol);
             collected[chordCol] += 1;
         }
@@ -288,6 +288,7 @@ public class Testing : MonoBehaviour
                     yield return new WaitForSeconds(waitIntervalInside);
                 }
             }
+            // break;
         }
     }
 
