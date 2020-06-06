@@ -8,7 +8,7 @@ public class Grid
     private int height;
     private float cellSize;
     private Vector3 originPos;
-    private int[,] gridArray;
+    private Stack<int>[,] gridStacks;
     private TextMesh[,] debugTextArray;
 
     public Grid(int width, int height, float cellSize, Vector3 originPos)
@@ -18,14 +18,17 @@ public class Grid
         this.cellSize = cellSize;
         this.originPos = originPos;
 
-        gridArray = new int [width,height];
+        gridStacks = new Stack<int>[width,height];
         debugTextArray = new TextMesh[width, height];
 
-        for (int x = 0; x < gridArray.GetLength(0); x++)
+        for (int x = 0; x < gridStacks.GetLength(0); x++)
         {
-          for (int y = 0; y < gridArray.GetLength(1); y++)
+          for (int y = 0; y < gridStacks.GetLength(1); y++)
           {
               // Debug.Log(x+" "+y);
+
+              gridStacks[x,y] = new Stack<int>();
+              gridStacks[x,y].Push(0);
 
               GameObject gameObject = new GameObject("wText", typeof(TextMesh));
               gameObject.transform.localPosition = GetPos(x,y) + new Vector3(cellSize, cellSize) * 0.5f;
@@ -43,7 +46,7 @@ public class Grid
 
     }
 
-    private Vector3 GetPos(int x, int y)
+    public Vector3 GetPos(int x, int y)
     {
         return new Vector3(x, y) * cellSize + originPos;
     }
@@ -58,8 +61,8 @@ public class Grid
     {
         if (x >= 0 && y >= 0 && x < width && y < height)
         {
-            gridArray[x, y] = value;
-            debugTextArray[x, y].text = gridArray[x, y].ToString();
+            gridStacks[x, y].Push(value);
+            debugTextArray[x, y].text = gridStacks[x, y].Peek().ToString();
         }
     }
 
@@ -67,11 +70,20 @@ public class Grid
     {
         if (x >= 0 && y >= 0 && x < width && y < height)
         {
-            return gridArray[x, y];
+            return gridStacks[x, y].Peek();
         }
         else
         {
             return -1;
+        }
+    }
+
+    public void PopValue(int x, int y)
+    {
+        if (x >= 0 && y >= 0 && x < width && y < height)
+        {
+            gridStacks[x, y].Pop();
+            debugTextArray[x, y].text = gridStacks[x, y].Peek().ToString();
         }
     }
 
