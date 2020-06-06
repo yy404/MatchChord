@@ -40,6 +40,8 @@ public class Testing : MonoBehaviour
                                     "666",
                                     "777",
                                     };
+    // private int count = 0;
+    // private int level = 1;
 
     // Start is called before the first frame update
     void Start()
@@ -82,7 +84,15 @@ public class Testing : MonoBehaviour
             currInt = -1;
             myQueue.Enqueue(thisPos);
             StartCoroutine(checkMatchQueue());
+            // count += 1; // shouldnot add if mouse clicked outside grid
+            // Debug.Log(count+"/"+(8+(level-1)*2)+", @"+level);
         }
+        // if(Input.GetMouseButtonDown(1))
+        // {
+        //     count = 0;
+        //     level += 1;
+        //     Debug.Log(count);
+        // }
         CapMapText.text = grid.GetCapMapText();
         ShowCollected();
     }
