@@ -138,4 +138,22 @@ public class Grid
         return thisCol;
     }
 
+    public string GetCapMapText()
+    {
+        string result = "";
+
+        for (int x = height-1; x >= 0; x--)
+        {
+          for (int y = 0; y < gridStacks.GetLength(1); y++)
+          {
+            result += gridStacks[y,x].Count-1;
+            result += " ";
+          }
+          result += "\n";
+        }
+
+        return result;
+    }
+
+
 }

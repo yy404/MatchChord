@@ -1,20 +1,27 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class Testing : MonoBehaviour
 {
+    public TextMeshProUGUI CapMapText;
+    public TextMeshProUGUI CurrIntText;
+    public TextMeshProUGUI CollectedText;
 
     private Grid grid;
     private int currInt;
     private AudioSource audioSource;
     private Dictionary<string, float> notes;
+    private Dictionary<string, int> collected;
 
     private float soundDuration = 0.2f;
     private float waitInterval = 0.3f; // no less than soundDuration
     private float soundDurationInside = 0.3f;
     private float waitIntervalInside = 0.4f; // no less than soundDurationInside
     private float soundDurationChord = 0.5f;
+
+    private Queue myQueue;
 
     string[] chords = new string[] {
                                     "135",
@@ -39,7 +46,7 @@ public class Testing : MonoBehaviour
     {
         grid = new Grid(3, 3, 10f, Vector3.zero);
         currInt = getNextInt();
-        Debug.Log(currInt);
+        CurrIntText.text = "ToAdd: " + currInt.ToString();
 
         audioSource = GetComponent<AudioSource>();
 
@@ -54,22 +61,30 @@ public class Testing : MonoBehaviour
         notes["5"]= 783.99f/2;
         notes["6"]= 880.0f/2;
         notes["7"]= 987.77f/2;
+
+        collected = new Dictionary<string, int>();
+        foreach(string chord in chords)
+        {
+            collected[chord] = 0;
+        }
+
+        myQueue = new Queue();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetMouseButtonDown(0))
+        if((Input.GetMouseButtonDown(0)) && (currInt>0))
         {
             Vector3 thisPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             grid.SetValue(thisPos, currInt);
-            checkMatch(thisPos);
+            playMySound(notes[currInt.ToString()],soundDuration);
+            currInt = -1;
+            myQueue.Enqueue(thisPos);
+            StartCoroutine(checkMatchQueue());
         }
-        if(Input.GetMouseButtonDown(1))
-        {
-            Vector3 thisPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            grid.SetValue(thisPos, 0);
-        }
+        CapMapText.text = grid.GetCapMapText();
+        ShowCollected();
     }
 
     int getNextInt()
@@ -77,8 +92,10 @@ public class Testing : MonoBehaviour
         return Random.Range(1,8);
     }
 
-    void checkMatch(Vector3 thisPos)
+    IEnumerator checkMatch(Vector3 thisPos)
     {
+        CurrIntText.text = "...";
+
         int x, y;
         grid.GetXY(thisPos, out x, out y);
 
@@ -93,7 +110,18 @@ public class Testing : MonoBehaviour
             ansCol += grid.GetValue(x,j).ToString();
         }
 
-        StartCoroutine(showChord(x, y, ansRow, ansCol));
+        string chordRow = checkPattern(SortString(ansRow), chords, true);
+        string chordCol = checkPattern(SortString(ansCol), chords, true);
+
+        if ((chordRow != "") || (chordCol != ""))
+        {
+            yield return StartCoroutine(showChord(x, y, chordRow, chordCol));
+        }
+        else
+        {
+            currInt = getNextInt();
+            CurrIntText.text = currInt.ToString();
+        }
     }
 
     string SortString(string s)
@@ -103,45 +131,29 @@ public class Testing : MonoBehaviour
         return new string(temp);
     }
 
-    IEnumerator showChord(int x, int y, string ansRow, string ansCol)
+    IEnumerator showChord(int x, int y, string chordRow, string chordCol)
     {
-        playMySound(notes[currInt.ToString()],soundDuration);
-        // yield return new WaitForSeconds(waitInterval);
-
-        string chordRow = checkPattern(SortString(ansRow), chords, true);
-        string chordCol = checkPattern(SortString(ansCol), chords, true);
 
         if (chordRow != "")
         {
             yield return new WaitForSeconds(waitInterval);
             yield return showChordList(chordRow, y, -1);
             playChord(chordRow);
+            collected[chordRow] += 1;
         }
         if (chordCol != "")
         {
             yield return new WaitForSeconds(waitInterval);
             yield return showChordList(chordCol, -1, x);
             playChord(chordCol);
+            collected[chordCol] += 1;
         }
 
         yield return new WaitForSeconds(waitInterval);
-        if ((chordRow != "") || (checkPattern(SortString(ansRow), triples) != ""))
-        {
-            for (int i = 0; i < grid.GetWidth(); i++)
-            {
-                grid.SetValue(i,y,0);
-            }
-        }
-        if ((chordCol != "") || (checkPattern(SortString(ansCol), triples) != ""))
-        {
-            for (int j = 0; j < grid.GetHeight(); j++)
-            {
-                grid.SetValue(x,j,0);
-            }
-        }
+        cleanMatch(x, y, chordRow, chordCol);
 
         currInt = getNextInt();
-        Debug.Log(currInt);
+        CurrIntText.text = currInt.ToString();
     }
 
     private void playMySound(float frequency, float duration)
@@ -190,6 +202,38 @@ public class Testing : MonoBehaviour
         }
     }
 
+    void cleanMatch(int x, int y, string chordRow, string chordCol)
+    {
+        if (chordRow != "")
+        {
+            for (int i = 0; i < grid.GetWidth(); i++)
+            {
+                if (i == x)
+                {
+                    continue;
+                }
+                grid.PopValue(i,y);
+                myQueue.Enqueue(grid.GetPos(i,y));
+            }
+        }
+        if (chordCol != "")
+        {
+            for (int j = 0; j < grid.GetHeight(); j++)
+            {
+                if (j == y)
+                {
+                    continue;
+                }
+                grid.PopValue(x,j);
+                myQueue.Enqueue(grid.GetPos(x,j));
+            }
+        }
+        if ((chordRow != "") || (chordCol != ""))
+        {
+            grid.PopValue(x,y);
+        }
+    }
+
     IEnumerator showChordList(string thisChord, int rowIndex, int colIndex)
     {
         int[] thisList;
@@ -211,7 +255,7 @@ public class Testing : MonoBehaviour
         {
             for (int i = 0; i < thisList.Length; i++)
             {
-                Debug.Log(thisList[i].ToString()[0]);
+                // Debug.Log(thisList[i].ToString()[0]);
                 if (thisList[i].ToString()[0] == temp)
                 {
                     float thisFreq = notes[temp.ToString()];
@@ -237,4 +281,22 @@ public class Testing : MonoBehaviour
         }
     }
 
+    void ShowCollected()
+    {
+        string result = "";
+        foreach(string chord in chords)
+        {
+            result += chord + ": " + collected[chord].ToString();
+            result += "\n";
+        }
+        CollectedText.text = result;
+    }
+
+    IEnumerator checkMatchQueue()
+    {
+        while (myQueue.Count != 0)
+        {
+            yield return checkMatch((Vector3) myQueue.Dequeue());
+        }
+    }
 }
