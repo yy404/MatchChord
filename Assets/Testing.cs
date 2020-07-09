@@ -22,14 +22,29 @@ public class Testing : MonoBehaviour
     private float soundDurationChord = 0.5f;
 
     private Queue myQueue;
+    private Queue intQueue;
 
     string[] chords = new string[] {
-                                    "135",
+                                    "",
+                                    "",
+                                    "",
+                                    "",
+                                    "",
+                                    "",
+                                    };
+    string[] chordsWhole = new string[] {
                                     "246",
-                                    "357",
                                     "461",
-                                    "572",
                                     "613",
+                                    "135",
+                                    "357",
+                                    "572",
+                                    // "135",
+                                    // "246",
+                                    // "357",
+                                    // "461",
+                                    // "572",
+                                    // "613",
                                     };
     string[] triples = new string[] {
                                     "111",
@@ -40,15 +55,16 @@ public class Testing : MonoBehaviour
                                     "666",
                                     "777",
                                     };
-    // private int count = 0;
-    // private int level = 1;
+    private int count = 0;
+    private int level = 1;
+    private int countThres = 10; //9 //8
+
+    private bool isChecking = false;
 
     // Start is called before the first frame update
     void Start()
     {
         grid = new Grid(3, 3, 10f, Vector3.zero);
-        currInt = getNextInt();
-        CurrIntText.text = "ToAdd: " + currInt.ToString();
 
         audioSource = GetComponent<AudioSource>();
 
@@ -64,6 +80,9 @@ public class Testing : MonoBehaviour
         notes["6"]= 880.0f/2;
         notes["7"]= 987.77f/2;
 
+        // chordsWhole = triples;
+        chords[0] = chordsWhole[0];
+
         collected = new Dictionary<string, int>();
         foreach(string chord in chords)
         {
@@ -71,40 +90,102 @@ public class Testing : MonoBehaviour
         }
 
         myQueue = new Queue();
+
+        intQueue = new Queue();
+
+        for (int i = 0; i < 6; i++) //4
+        {
+            intQueue.Enqueue(getRandInt());
+        }
+
+        CurrIntText.text = getIntQueueStr();
+        currInt = getNextInt();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if((Input.GetMouseButtonDown(0)) && (currInt>0))
+        if((Input.GetMouseButtonDown(0)) && (isChecking != true))
         {
             Vector3 thisPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             grid.SetValue(thisPos, currInt);
             playMySound(notes[currInt.ToString()],soundDuration);
-            currInt = -1;
             myQueue.Enqueue(thisPos);
             StartCoroutine(checkMatchQueue());
-            // count += 1; // shouldnot add if mouse clicked outside grid
-            // Debug.Log(count+"/"+(8+(level-1)*2)+", @"+level);
+            count += 1; // shouldnot add if mouse clicked outside grid
+            Debug.Log(count+"/"+countThres+", @"+level+", Max:"+(1+level/2));
         }
-        // if(Input.GetMouseButtonDown(1))
-        // {
-        //     count = 0;
-        //     level += 1;
-        //     Debug.Log(count);
-        // }
+        if(count == countThres)
+        {
+            count = 0;
+            level += 1;
+            countThres = 10+(level-1)*2;
+            chords[level-1] = chordsWhole[level-1];
+            collected[chords[level-1]] = 0;
+            Debug.Log(count+"/"+countThres+", @"+level+", Max:"+(1+level/2));
+        }
         CapMapText.text = grid.GetCapMapText();
         ShowCollected();
     }
 
     int getNextInt()
     {
-        return Random.Range(1,8);
+        int res = (int) intQueue.Dequeue();
+        intQueue.Enqueue(getRandInt());
+        return res;
+    }
+
+    int getRandInt()
+    {
+        // int upper = 8;
+        // int upper = Mathf.Clamp(4+level-1, 1, 8);
+        // int upper = Mathf.Clamp(9-level, 4, 8);
+        // return Random.Range(1,upper);
+
+        int res = -1;
+        int upper = Mathf.Clamp(3+level-1, 0, 7);
+        switch (Random.Range(0,upper))
+        {
+            case 0:
+                res = 2;
+                break;
+            case 1:
+                res = 4;
+                break;
+            case 2:
+                res = 6;
+                break;
+            case 3:
+                res = 1;
+                break;
+            case 4:
+                res = 3;
+                break;
+            case 5:
+                res = 5;
+                break;
+            case 6:
+                res = 7;
+                break;
+        }
+        return res;
+    }
+
+    string getIntQueueStr()
+    {
+        string res = "";
+        for (int i = 0; i < intQueue.Count; i++)
+        {
+            int thisInt = (int) intQueue.Dequeue();
+            res += thisInt.ToString();
+            res += " ";
+            intQueue.Enqueue(thisInt);
+        }
+        return res;
     }
 
     IEnumerator checkMatch(Vector3 thisPos)
     {
-        CurrIntText.text = "...";
 
         int x, y;
         grid.GetXY(thisPos, out x, out y);
@@ -127,11 +208,7 @@ public class Testing : MonoBehaviour
         {
             yield return StartCoroutine(showChord(x, y, chordRow, chordCol));
         }
-        else
-        {
-            currInt = getNextInt();
-            CurrIntText.text = currInt.ToString();
-        }
+
     }
 
     string SortString(string s)
@@ -147,14 +224,14 @@ public class Testing : MonoBehaviour
         if (chordRow != "")
         {
             yield return new WaitForSeconds(waitInterval);
-            // yield return showChordList(chordRow, y, -1);
+            yield return showChordList(chordRow, y, -1);
             playChord(chordRow);
             collected[chordRow] += 1;
         }
         if (chordCol != "")
         {
             yield return new WaitForSeconds(waitInterval);
-            // yield return showChordList(chordCol, -1, x);
+            yield return showChordList(chordCol, -1, x);
             playChord(chordCol);
             collected[chordCol] += 1;
         }
@@ -162,8 +239,6 @@ public class Testing : MonoBehaviour
         yield return new WaitForSeconds(waitInterval);
         cleanMatch(x, y, chordRow, chordCol);
 
-        currInt = getNextInt();
-        CurrIntText.text = currInt.ToString();
     }
 
     private void playMySound(float frequency, float duration)
@@ -259,6 +334,15 @@ public class Testing : MonoBehaviour
             isRow = true;
         }
 
+        bool isTriple = false;
+        foreach (string pattern in triples)
+        {
+            if (thisChord == pattern)
+            {
+                isTriple = true;
+            }
+        }
+
         float prevFreq = 0;
         float scale = 1.0f;
         foreach (char temp in thisChord.ToCharArray())
@@ -288,7 +372,10 @@ public class Testing : MonoBehaviour
                     yield return new WaitForSeconds(waitIntervalInside);
                 }
             }
-            // break;
+            if (isTriple)
+            {
+                break;
+            }
         }
     }
 
@@ -305,9 +392,16 @@ public class Testing : MonoBehaviour
 
     IEnumerator checkMatchQueue()
     {
+        isChecking = true;
+        CurrIntText.text = "...";
+
         while (myQueue.Count != 0)
         {
             yield return checkMatch((Vector3) myQueue.Dequeue());
         }
+
+        CurrIntText.text = getIntQueueStr();
+        currInt = getNextInt();
+        isChecking = false;
     }
 }
